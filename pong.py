@@ -67,6 +67,14 @@ def main():
         ):
             pygame.draw.rect(surface, (0, 0, 255), self.rect)
 
+    def check_movement(
+        x: pygame.sprite.Sprite,
+        move_amount: int
+    ):
+        min_y = 0 + x.rect.height // 2
+        max_y = internal_height - x.rect.height // 2
+        x.pos = (x.pos[0], max(min_y, min(move_amount, max_y)))
+
     # Initialize
     pygame.init()
     pygame.display.set_caption("Pong")
@@ -122,9 +130,7 @@ def main():
             movement = player.pos[1] + movement_speed * dt
         # Boundry Check
         if movement is not None:
-            min_y = 0 + player.rect.height // 2
-            max_y = internal_height - player.rect.height // 2
-            player.pos = (player.pos[0], max(min_y, min(movement, max_y)))
+            check_movement(player, movement)
 
         # Interal rendering
         internal_surface.fill((0, 0, 0))
