@@ -69,11 +69,11 @@ def main():
 
     def check_movement(
         x: pygame.sprite.Sprite,
-        move_amount: int
+        movement: int
     ):
         min_y = 0 + x.rect.height // 2
         max_y = internal_height - x.rect.height // 2
-        x.pos = (x.pos[0], max(min_y, min(move_amount, max_y)))
+        x.pos = (x.pos[0], max(min_y, min(movement, max_y)))
 
     # Initialize
     pygame.init()
@@ -122,26 +122,32 @@ def main():
         else:
             space_pressed = False
 
-        # Player Movement
-        movement = None
-        if keys[pygame.K_w] or keys[pygame.K_UP]:
-            movement = player.pos[1] - movement_speed * dt
-        elif keys[pygame.K_s] or keys[pygame.K_DOWN]:
-            movement = player.pos[1] + movement_speed * dt
-        # Boundry Check
-        if movement is not None:
-            check_movement(player, movement)
+        if gamestate == "gameover":
+            running = False
+        elif gamestate == "game":
+            # Player Movement
+            player_movement = None
+            if keys[pygame.K_w] or keys[pygame.K_UP]:
+                player_movement = player.pos[1] - movement_speed * dt
+            elif keys[pygame.K_s] or keys[pygame.K_DOWN]:
+                player_movement = player.pos[1] + movement_speed * dt
+            # Boundry Check
+            if player_movement is not None:
+                check_movement(player, player_movement)
+            
+            if not internal_surface.get_rect().contains(ball.rect):
+                gamestate = "gameover"
 
-        # Interal rendering
-        internal_surface.fill((0, 0, 0))
-        player.update(internal_surface)
-        opponent.update(internal_surface)
-        ball.update(internal_surface)
+            # Interal rendering
+            internal_surface.fill((0, 0, 0))
+            player.update(internal_surface)
+            opponent.update(internal_surface)
+            ball.update(internal_surface)
 
-        if debug_mode:
-            player.debug(internal_surface)
-            opponent.debug(internal_surface)
-            ball.debug(internal_surface)
+            if debug_mode:
+                player.debug(internal_surface)
+                opponent.debug(internal_surface)
+                ball.debug(internal_surface)
 
         # Upscale to 1920x1080
         scaled_surface = pygame.transform.scale(internal_surface, screen_size)
