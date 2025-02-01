@@ -6,10 +6,15 @@ def main():
     class GamePlayer(pygame.sprite.Sprite):
         def __init__(
             self,
-            pos: tuple[int, int],
-            size: tuple[int, int] = (8, 80)
+            type: str = "player",
+            size: tuple[int, int] | None = (8, 80)
         ):
             super().__init__()
+
+            if type == "player":
+                pos = (internal_width - size[0], internal_height // 2)
+            else:
+                pos = (size[0], internal_height // 2)
 
             self.pos = pos
             self.size = size
@@ -23,7 +28,7 @@ def main():
         ):
             # # Update positions
             self.rect.center = self.pos
-            # # Render player
+            # # Render
             display_surface.blit(self.surface, self.rect)
         
         def debug(
@@ -31,6 +36,36 @@ def main():
             surface: pygame.Surface
         ):
             pygame.draw.rect(surface, (255, 0, 0), self.rect, 1)
+
+    class Ball(pygame.sprite.Sprite):
+        def __init__(
+            self,
+            size: tuple[int, int] = (8, 8),
+        ):
+            super().__init__()
+
+            self.pos = (internal_width // 2, internal_height // 2)
+            self.size = size
+            self.speed = 100
+            self.angle = 0
+            self.surface = pygame.Surface(self.size)
+            self.surface.fill((255, 255, 255))
+            self.rect = self.surface.get_rect()
+
+        def update(
+            self,
+            display_surface: pygame.Surface
+        ):
+            # # Update positions
+            self.rect.center = self.pos
+            # # Render
+            display_surface.blit(self.surface, self.rect)
+
+        def debug(
+            self,
+            surface: pygame.Surface
+        ):
+            pygame.draw.rect(surface, (0, 0, 255), self.rect)
 
     # Initialize
     pygame.init()
@@ -47,7 +82,9 @@ def main():
     internal_surface = pygame.Surface((internal_width, internal_height)) # For rendering
     screen = pygame.display.set_mode(screen_size) # pygame.FULLSCREEN
 
-    player = GamePlayer(pos=(internal_width // 2, internal_height // 2))
+    player = GamePlayer()
+    opponent = GamePlayer("opponent")
+    ball = Ball()
 
     running = True
     debug_mode = False
@@ -78,17 +115,27 @@ def main():
             space_pressed = False
 
         # Player Movement
+        movement = None
         if keys[pygame.K_w] or keys[pygame.K_UP]:
-            player.pos = (player.pos[0], player.pos[1] - movement_speed * dt)
+            movement = player.pos[1] - movement_speed * dt
         elif keys[pygame.K_s] or keys[pygame.K_DOWN]:
-            player.pos = (player.pos[0], player.pos[1] + movement_speed * dt)
+            movement = player.pos[1] + movement_speed * dt
+        # Boundry Check
+        if movement is not None:
+            min_y = 0 + player.rect.height // 2
+            max_y = internal_height - player.rect.height // 2
+            player.pos = (player.pos[0], max(min_y, min(movement, max_y)))
 
         # Interal rendering
         internal_surface.fill((0, 0, 0))
         player.update(internal_surface)
+        opponent.update(internal_surface)
+        ball.update(internal_surface)
 
         if debug_mode:
             player.debug(internal_surface)
+            opponent.debug(internal_surface)
+            ball.debug(internal_surface)
 
         # Upscale to 1920x1080
         scaled_surface = pygame.transform.scale(internal_surface, screen_size)
