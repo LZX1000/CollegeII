@@ -10,7 +10,6 @@ def main():
             size: tuple[int, int] | None = (8, 80)
         ):
             super().__init__()
-
             if type == "player":
                 pos = (internal_width - size[0], internal_height // 2)
             else:
@@ -40,14 +39,22 @@ def main():
     class Ball(pygame.sprite.Sprite):
         def __init__(
             self,
+            pos: tuple[int, int] | None = None,
             size: tuple[int, int] = (8, 8),
+            speed: int | float = 100,
+            angle: float | int = 0,
+            max_bounce_angle: float = math.radians(45)
         ):
             super().__init__()
+            if pos is None:
+                self.pos = (internal_width // 2, internal_height // 2)
+            else:
+                self.pos = pos
 
-            self.pos = (internal_width // 2, internal_height // 2)
             self.size = size
-            self.speed = 100
-            self.angle = 0
+            self.speed = speed
+            self.angle = angle
+            self.max_bounce_angle = max_bounce_angle
             self.surface = pygame.Surface(self.size)
             self.surface.fill((255, 255, 255))
             self.rect = self.surface.get_rect()
@@ -65,7 +72,7 @@ def main():
             self,
             surface: pygame.Surface
         ):
-            pygame.draw.rect(surface, (0, 0, 255), self.rect)
+            pygame.draw.rect(surface, (0, 0, 255), self.rect, 1)
 
     def check_movement(
         x: pygame.sprite.Sprite,
@@ -88,6 +95,7 @@ def main():
     screen_size = (1920, 1080)
     # # Surfaces
     internal_surface = pygame.Surface((internal_width, internal_height)) # For rendering
+    internal_surface_rect = internal_surface.get_rect()
     screen = pygame.display.set_mode(screen_size) # pygame.FULLSCREEN
 
     player = GamePlayer()
@@ -131,11 +139,35 @@ def main():
                 player_movement = player.pos[1] - movement_speed * dt
             elif keys[pygame.K_s] or keys[pygame.K_DOWN]:
                 player_movement = player.pos[1] + movement_speed * dt
-            # Boundry Check
+            # Player Boundry Check
             if player_movement is not None:
                 check_movement(player, player_movement)
             
-            if not internal_surface.get_rect().contains(ball.rect):
+            # Ball Movement
+            ball_speed_x = ball.speed * math.cos(ball.angle)
+            ball_speed_y = ball.speed * math.sin(ball.angle)
+            ball.pos = (
+                ball.pos[0] + ball_speed_x * dt,
+                ball.pos[1] + ball_speed_y * dt
+            )
+            # Ball Collision Check
+            if ball.rect.colliderect(player.rect) or ball.rect.colliderect(opponent.rect):
+                paddle = player if ball.rect.colliderect(player.rect) else opponent
+
+                where_hit = (ball.pos[1] - paddle.pos[1]) / (paddle.rect.height / 2)
+
+                ball.angle = where_hit * ball.max_bounce_angle
+
+                if paddle == player:
+                    ball.angle = math.pi - ball.angle
+                elif paddle == opponent:
+                    ball.angle = -ball.angle
+                
+                ball.speed *= 1.05
+            # Ball Boundry Check
+            if ball.pos[1] <= 0 or ball.pos[1] >= internal_height:
+                ball.angle = -ball.angle
+            elif ball.pos[0] <= 0 or ball.pos[0] >= internal_width:
                 gamestate = "gameover"
 
             # Interal rendering
