@@ -4,6 +4,21 @@ import ctypes
 BUTTON_COUNT = 0
 
 def main():
+    class Player(pygame.sprite.Sprite):
+        def __init__(
+            self,
+        ):
+            super().__init__()
+            self.money = 0
+            self.stress = 0
+            self.happiness = 0
+            self.productivity = 0
+            self.hunger = 0
+            self.health = 100
+
+            self.work_time = 8
+            self.salary = 7
+
     class Button(pygame.sprite.Sprite):
         def __init__(
             self,
@@ -68,9 +83,47 @@ def main():
         def debug(self, surface: pygame.Surface):
             pygame.draw.rect(surface, self.debug_color, self.rect, 1)
 
-    def button_counter():
-        global BUTTON_COUNT
-        BUTTON_COUNT += 1
+    def work():
+        player.money += player.work_time * player.salary
+        add_hunger = player.hunger + player.work_time
+        if add_hunger > 100:
+            player.hunger = 100
+            player.health -= add_hunger - 100
+        else:
+            player.hunger = add_hunger
+    
+    def rest():
+        if player.health < 100:
+            player.health = min(player.health + 10, 100)
+
+        add_hunger = player.hunger + 10
+        if add_hunger > 100:
+            player.hunger = 100
+            player.health -= add_hunger - 100
+        else:
+            player.hunger = add_hunger
+
+        add_health = player.health + 5
+        if add_health > 100:
+            player.health = 100
+        else:
+            player.health = add_health
+    
+    def eat():
+        if player.money >= 20:
+            player.money -= 20
+
+            add_health = player.health + 5
+            if add_health > 100:
+                player.health = 100
+            else:
+                player.health = add_health
+
+            less_hunger = player.hunger - 10
+            if less_hunger < 0:
+                player.hunger = 0
+            else:
+                player.hunger = less_hunger
 
     # Initialize
     pygame.init()
@@ -90,17 +143,20 @@ def main():
     # Create Buttons
     buttons = []
 
-    test_button = Button("Test", style="centered", debug_color=(255, 0, 0), on_click=button_counter)
-    test_button.rect.topleft = (50, 50)
+    test_button = Button("Work", style="centered", background_color=(240, 240, 240), debug_color=(255, 0, 0), on_click=work)
+    test_button.rect.center = (internal_width // 2, internal_height // 2 - 50)
     buttons.append(test_button)
 
-    test_button1 = Button("Test Button", style="centered", debug_color=(0, 255, 0))
-    test_button1.rect.topleft = (50, 150)
+    test_button1 = Button("Rest", style="centered", background_color=(240, 250, 250), debug_color=(0, 255, 0), on_click=rest)
+    test_button1.rect.center = (internal_width // 2, internal_height // 2)
     buttons.append(test_button1)
     
-    test_button2 = Button(["Test", "Button"], style="centered", debug_color=(0, 0, 255), spacing=10)
-    test_button2.rect.topleft = (50, 250)
+    test_button2 = Button("Eat", style="centered", background_color=(240, 240, 240), debug_color=(0, 0, 255), on_click=eat)
+    test_button2.rect.center = (internal_width // 2, internal_height // 2 + 50)
     buttons.append(test_button2)
+
+    # Player
+    player = Player()
 
     running = True
     debug_mode = False
@@ -146,21 +202,40 @@ def main():
 
         if gamestate == "game":
             # Interal rendering
-            internal_surface.fill((255, 255, 255))
-            if BUTTON_COUNT % 3 == 0:
-                internal_surface.blit(test_button.surface, test_button.rect.topleft)
-            elif BUTTON_COUNT % 3 == 1:
-                internal_surface.blit(test_button.surface, test_button.rect.topleft)
-                internal_surface.blit(test_button1.surface, test_button1.rect.topleft)
-            else:
-                internal_surface.blit(test_button.surface, test_button.rect.topleft)
-                internal_surface.blit(test_button1.surface, test_button1.rect.topleft)
-                internal_surface.blit(test_button2.surface, test_button2.rect.topleft)
+            internal_surface.fill((200, 200, 200))
 
-            if debug_mode:
-                test_button.debug(internal_surface)
-                test_button1.debug(internal_surface)
-                test_button2.debug(internal_surface)
+            # Create User Interface
+            user_interface_surfaces = []
+
+            money_text_surface = Button(f"Money : {player.money}", style="centered", debug_color=(0, 255, 0))
+            money_text_surface.rect.topleft = (0, 0)
+            user_interface_surfaces.append(money_text_surface)
+
+            hunger_text_surface = Button(f"Hunger : {player.hunger}", style="centered", debug_color=(0, 255, 0))
+            hunger_text_surface.rect.topleft = (0, 25)
+            user_interface_surfaces.append(hunger_text_surface)
+
+            health_text_surface = Button(f"Health : {player.health}", style="centered", debug_color=(0, 255, 0))
+            health_text_surface.rect.topleft = (0, 50)
+            user_interface_surfaces.append(health_text_surface)
+
+            work_time_text_surface = Button(f"Work Time : {player.work_time}", style="centered", debug_color=(0, 255, 0))
+            work_time_text_surface.rect.topleft = (internal_width - work_time_text_surface.rect.width, 0)
+            user_interface_surfaces.append(work_time_text_surface)
+
+            salary_text_surface = Button(f"Salary : {player.salary}", style="centered", debug_color=(0, 255, 0))
+            salary_text_surface.rect.topleft = (internal_width - salary_text_surface.rect.width, 25)
+            user_interface_surfaces.append(salary_text_surface)
+
+            for i, surface in enumerate(user_interface_surfaces):
+                internal_surface.blit(surface.surface, surface.rect.topleft)
+
+            # Render Buttons
+            for button in buttons:
+                internal_surface.blit(button.surface, button.rect.topleft)
+                
+                if debug_mode:
+                    button.debug(internal_surface)
 
         # Upscale to 1920x1080
         scaled_surface = pygame.transform.scale(internal_surface, screen_size)
