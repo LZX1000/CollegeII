@@ -12,6 +12,7 @@ def main():
             width_room = 20,
             height_room = 10,
             text_color = (0, 0, 0),
+            background_color = (0, 0, 0, 0),
             spacing = 20,
             style = "default",
             on_click = "",
@@ -42,8 +43,9 @@ def main():
             vertical_offset = (size[1] - total_text_height) // 2
 
             # Button Surface
-            self.surface = pygame.Surface(size)
-            self.surface.fill((255, 255, 255))
+            self.surface = pygame.Surface(size, pygame.SRCALPHA)
+            if background_color:
+                self.surface.fill(background_color)
 
             # Position Texts
             current_y = vertical_offset
@@ -144,7 +146,7 @@ def main():
 
         if gamestate == "game":
             # Interal rendering
-            internal_surface.fill((0, 0, 0))
+            internal_surface.fill((255, 255, 255))
             if BUTTON_COUNT % 3 == 0:
                 internal_surface.blit(test_button.surface, test_button.rect.topleft)
             elif BUTTON_COUNT % 3 == 1:
