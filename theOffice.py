@@ -1,6 +1,8 @@
 import pygame
 import ctypes
 
+BUTTON_COUNT = 0
+
 def main():
     class Button(pygame.sprite.Sprite):
         def __init__(
@@ -12,6 +14,7 @@ def main():
             text_color = (0, 0, 0),
             spacing = 20,
             style = "default",
+            on_click = "",
             debug_color = (255, 0, 0)
         ):
             super().__init__()
@@ -52,10 +55,20 @@ def main():
                 current_y += text_surface.get_height() + spacing
         
             self.rect = self.surface.get_rect()
+            self.on_click = on_click
+
             self.debug_color = debug_color
+        
+        def click(self):
+            if self.on_click:
+                self.on_click()
 
         def debug(self, surface: pygame.Surface):
             pygame.draw.rect(surface, self.debug_color, self.rect, 1)
+
+    def button_counter():
+        global BUTTON_COUNT
+        BUTTON_COUNT += 1
 
     # Initialize
     pygame.init()
@@ -73,14 +86,19 @@ def main():
     screen = pygame.display.set_mode(screen_size) # pygame.FULLSCREEN
 
     # Create Buttons
-    test_button = Button("Test", style="centered")
+    buttons = []
+
+    test_button = Button("Test", style="centered", debug_color=(255, 0, 0), on_click=button_counter)
     test_button.rect.topleft = (50, 50)
+    buttons.append(test_button)
 
     test_button1 = Button("Test Button", style="centered", debug_color=(0, 255, 0))
     test_button1.rect.topleft = (50, 150)
+    buttons.append(test_button1)
     
     test_button2 = Button(["Test", "Button"], style="centered", debug_color=(0, 0, 255), spacing=10)
     test_button2.rect.topleft = (50, 250)
+    buttons.append(test_button2)
 
     running = True
     debug_mode = False
@@ -92,12 +110,26 @@ def main():
     while running:
         keys = pygame.key.get_pressed()
 
+        # Get accurate mouse position
+        scaled_mouse_pos = pygame.mouse.get_pos()
+        mouse_pos = (
+            scaled_mouse_pos[0] * internal_width / screen_size[0],
+            scaled_mouse_pos[1] * internal_height / screen_size[1]
+            )
+
         if keys[pygame.K_ESCAPE]:
             running = False
     
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            
+            # Handle mouse clicks
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    for button in buttons:
+                        if button.rect.collidepoint(mouse_pos):
+                            button.click()
         
         # Special Binds
         if keys[pygame.K_LCTRL] and keys[pygame.K_SPACE]:
@@ -113,9 +145,15 @@ def main():
         if gamestate == "game":
             # Interal rendering
             internal_surface.fill((0, 0, 0))
-            internal_surface.blit(test_button.surface, test_button.rect.topleft)
-            internal_surface.blit(test_button1.surface, test_button1.rect.topleft)
-            internal_surface.blit(test_button2.surface, test_button2.rect.topleft)
+            if BUTTON_COUNT % 3 == 0:
+                internal_surface.blit(test_button.surface, test_button.rect.topleft)
+            elif BUTTON_COUNT % 3 == 1:
+                internal_surface.blit(test_button.surface, test_button.rect.topleft)
+                internal_surface.blit(test_button1.surface, test_button1.rect.topleft)
+            else:
+                internal_surface.blit(test_button.surface, test_button.rect.topleft)
+                internal_surface.blit(test_button1.surface, test_button1.rect.topleft)
+                internal_surface.blit(test_button2.surface, test_button2.rect.topleft)
 
             if debug_mode:
                 test_button.debug(internal_surface)
