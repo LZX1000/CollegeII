@@ -1,23 +1,44 @@
 import pygame
 import ctypes
-
-BUTTON_COUNT = 0
-
 def main():
-    class Player(pygame.sprite.Sprite):
+    class Stats:
+        def __init__(self):
+            self.day = 0
+    class Player():
         def __init__(
             self,
+            money = 0,  
+            stress = 0, 
+            happiness = 0,
+            productivity = 10,
+            hunger = 0,
+            health = 100,
         ):
-            super().__init__()
-            self.money = 0
-            self.stress = 0
-            self.happiness = 0
-            self.productivity = 0
-            self.hunger = 0
-            self.health = 100
-
-            self.work_time = 8
-            self.salary = 7
+            self.money = money
+            self.stress = stress
+            self.happiness = happiness
+            self.productivity = productivity
+            self.hunger = hunger
+            self.health = health
+    
+    class Job():
+        def __init__(
+            self,
+            name = "Job",
+            salary = 7,
+            work_time = 8,
+            promotion_progress = 0,
+            ladder_level = 0
+        ):
+            self.name = name
+            self.salary = salary
+            self.work_time = work_time
+            self.promotion_progress = promotion_progress
+            self.ladder_level = ladder_level
+        
+        def promotion(self):
+            self.ladder_level += 1
+            self.salary += round(self.ladder_level * 1.5 + 1) + self.salary
 
     class Button(pygame.sprite.Sprite):
         def __init__(
@@ -84,8 +105,8 @@ def main():
             pygame.draw.rect(surface, self.debug_color, self.rect, 1)
 
     def work():
-        player.money += player.work_time * player.salary
-        add_hunger = player.hunger + player.work_time
+        player.money += job.work_time * job.salary
+        add_hunger = player.hunger + job.work_time
         if add_hunger > 100:
             player.hunger = 100
             player.health -= add_hunger - 100
@@ -125,6 +146,22 @@ def main():
             else:
                 player.hunger = less_hunger
 
+    def advance_day():
+        stats.day += 1
+
+        change_productivity = player.productivity + (player.happiness - player.stress) / 10
+        if change_productivity > 100:
+            player.productivity = 100
+        elif change_productivity < 0:
+            player.productivity = 0
+        else:
+            player.productivity = change_productivity
+
+        job.promotion_progress += player.productivity / 100
+        if job.promotion_progress >= 100:
+            job.promotion_progress = 0
+            job.promotion()
+
     # Initialize
     pygame.init()
     pygame.display.set_caption("Pong")
@@ -156,7 +193,11 @@ def main():
     buttons.append(test_button2)
 
     # Player
+    job = Job()
     player = Player()
+
+    # Stats
+    stats = Stats()
 
     running = True
     debug_mode = False
@@ -188,6 +229,10 @@ def main():
                     for button in buttons:
                         if button.rect.collidepoint(mouse_pos):
                             button.click()
+
+                            advance_day()
+                            if player.health <= 0:
+                                gamestate = "game over"
         
         # Special Binds
         if keys[pygame.K_LCTRL] and keys[pygame.K_SPACE]:
@@ -219,11 +264,11 @@ def main():
             health_text_surface.rect.topleft = (0, 50)
             user_interface_surfaces.append(health_text_surface)
 
-            work_time_text_surface = Button(f"Work Time : {player.work_time}", style="centered", debug_color=(0, 255, 0))
+            work_time_text_surface = Button(f"Work Time : {job.work_time}", style="centered", debug_color=(0, 255, 0))
             work_time_text_surface.rect.topleft = (internal_width - work_time_text_surface.rect.width, 0)
             user_interface_surfaces.append(work_time_text_surface)
 
-            salary_text_surface = Button(f"Salary : {player.salary}", style="centered", debug_color=(0, 255, 0))
+            salary_text_surface = Button(f"Salary : {job.salary}", style="centered", debug_color=(0, 255, 0))
             salary_text_surface.rect.topleft = (internal_width - salary_text_surface.rect.width, 25)
             user_interface_surfaces.append(salary_text_surface)
 
