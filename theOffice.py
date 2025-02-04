@@ -252,6 +252,7 @@ def main():
             # Create User Interface
             user_interface_surfaces = []
 
+            # Player
             money_text_surface = Button(f"Money : {player.money}", style="centered", debug_color=(0, 255, 0))
             money_text_surface.rect.topleft = (0, 0)
             user_interface_surfaces.append(money_text_surface)
@@ -264,12 +265,17 @@ def main():
             health_text_surface.rect.topleft = (0, 50)
             user_interface_surfaces.append(health_text_surface)
 
+            # Job
+            ladder_level_text_surface = Button(f"Ladder Level : {job.ladder_level}", style="centered", debug_color=(0, 255, 0))
+            ladder_level_text_surface.rect.topleft = (internal_width - ladder_level_text_surface.rect.width, 0)
+            user_interface_surfaces.append(ladder_level_text_surface)
+
             work_time_text_surface = Button(f"Work Time : {job.work_time}", style="centered", debug_color=(0, 255, 0))
-            work_time_text_surface.rect.topleft = (internal_width - work_time_text_surface.rect.width, 0)
+            work_time_text_surface.rect.topleft = (internal_width - work_time_text_surface.rect.width, 25)
             user_interface_surfaces.append(work_time_text_surface)
 
             salary_text_surface = Button(f"Salary : {job.salary}", style="centered", debug_color=(0, 255, 0))
-            salary_text_surface.rect.topleft = (internal_width - salary_text_surface.rect.width, 25)
+            salary_text_surface.rect.topleft = (internal_width - salary_text_surface.rect.width, 35)
             user_interface_surfaces.append(salary_text_surface)
 
             for i, surface in enumerate(user_interface_surfaces):
