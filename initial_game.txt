@@ -1,0 +1,64 @@
+import pygame
+import ctypes
+
+def main():
+    # Initialize
+    pygame.init()
+    pygame.display.set_caption("Pong")
+    font = pygame.font.SysFont("Arial", 20)
+    clock = pygame.time.Clock()
+
+    # Screen Settings
+    internal_width = 640
+    internal_height = 360
+    ctypes.windll.user32.SetProcessDPIAware()
+    screen_size = (1920, 1080)
+
+    internal_surface = pygame.Surface((internal_width, internal_height))
+    screen = pygame.display.set_mode(screen_size) # pygame.FULLSCREEN
+
+    running = True
+    debug_mode = False
+    gamestate = "game"
+    max_fps = 60
+
+    space_pressed = False
+
+    while running:
+        keys = pygame.key.get_pressed()
+
+        if keys[pygame.K_ESCAPE]:
+            running = False
+    
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+        
+        # Special Binds
+        if keys[pygame.K_LCTRL] and keys[pygame.K_SPACE]:
+            if not space_pressed:
+                space_pressed = True
+                if debug_mode:
+                    debug_mode = False
+                else:
+                    debug_mode = True
+        else:
+            space_pressed = False
+
+        if gamestate == "game":
+            # Interal rendering
+            internal_surface.fill((0, 0, 0))
+
+            if debug_mode:
+                pass
+
+        # Upscale to 1920x1080
+        scaled_surface = pygame.transform.scale(internal_surface, screen_size)
+        screen.blit(scaled_surface, (0, 0))
+
+        pygame.display.flip()
+        # Tick Speed
+        dt = clock.tick(max_fps) / 1000
+
+if __name__ == "__main__":
+    main()
