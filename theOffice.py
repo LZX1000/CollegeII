@@ -12,6 +12,8 @@ def main():
             happiness = 0,
             productivity = 10,
             hunger = 0,
+            time_since_last_meal = 0,
+            packed_lunch = False,
             health = 100,
         ):
             self.money = money
@@ -19,6 +21,8 @@ def main():
             self.happiness = happiness
             self.productivity = productivity
             self.hunger = hunger
+            self.time_since_last_meal = time_since_last_meal
+            self.packed_lunch = packed_lunch
             self.health = health
     
     class Job():
@@ -51,7 +55,10 @@ def main():
             background_color = (0, 0, 0, 0),
             spacing = 20,
             style = "default",
-            on_click = "",
+            parent = None,
+            on_click = None,
+            on_hover = None,
+            clean_up = None,
             debug_color = (255, 0, 0)
         ):
             super().__init__()
@@ -93,44 +100,89 @@ def main():
                 current_y += text_surface.get_height() + spacing
         
             self.rect = self.surface.get_rect()
+            self.parent = parent
             self.on_click = on_click
+
+            # Hovering
+            self.on_hover = on_hover
+            self.clean_up = clean_up
+            self.hovering = False
 
             self.debug_color = debug_color
         
         def click(self):
             if self.on_click:
                 self.on_click()
+        
+        def hover(self):
+            if self.on_hover:
+                self.on_hover()
 
         def debug(self, surface: pygame.Surface):
             pygame.draw.rect(surface, self.debug_color, self.rect, 1)
 
+    def get_hover_chain(button):
+        '''Return a list of this button and all its parents.'''
+        chain = []
+        current = button
+        while current:
+            chain.append(current)
+            current = current.parent  # assumes parent is either a Button or None
+        return chain
+
+    def calculate_hunger_increase(time_taken: int):
+        hunger_increase = 0
+        for i in range(time_taken):
+            if player.time_since_last_meal <= 3:
+                hunger_increase += 5
+            elif player.time_since_last_meal <= 6:
+                hunger_increase += 12
+            else:
+                hunger_increase += 20
+            player.time_since_last_meal += 1
+            i += 1
+        return hunger_increase
+
+    def advance_day():
+        stats.day += 1
+
+        change_productivity = player.productivity + (player.happiness - player.stress) / 10
+        if change_productivity > 100:
+            player.productivity = 100
+        elif change_productivity < 0:
+            player.productivity = 0
+        else:
+            player.productivity = change_productivity
+
+        job.promotion_progress += player.productivity / 10
+        if job.promotion_progress >= 100:
+            job.promotion_progress = 0
+            job.promotion()
+
+    '''*******************************Button Clicks*******************************'''
+    
     def work():
         player.money += job.work_time * job.salary
-        add_hunger = player.hunger + job.work_time
-        if add_hunger > 100:
+
+        hunger_increase = calculate_hunger_increase(job.work_time)
+
+        player.hunger += hunger_increase
+        if player.hunger > 100:
+            player.health -= player.hunger - 100
             player.hunger = 100
-            player.health -= add_hunger - 100
-        else:
-            player.hunger = add_hunger
     
-    def rest():
+    def rest(time_taken: int = 10):
         if player.health < 100:
-            player.health = min(player.health + 10, 100)
+            player.health = min(player.health + time_taken, 100)
 
-        add_hunger = player.hunger + 10
-        if add_hunger > 100:
+        hunger_increase = calculate_hunger_increase(time_taken)
+        
+        player.hunger += hunger_increase
+        if player.hunger > 100:
+            player.health -= player.hunger - 100
             player.hunger = 100
-            player.health -= add_hunger - 100
-        else:
-            player.hunger = add_hunger
-
-        add_health = player.health + 5
-        if add_health > 100:
-            player.health = 100
-        else:
-            player.health = add_health
     
-    def eat():
+    def eat(food_type: str = "small_snack"):
         if player.money >= 20:
             player.money -= 20
 
@@ -145,22 +197,6 @@ def main():
                 player.hunger = 0
             else:
                 player.hunger = less_hunger
-
-    def advance_day():
-        stats.day += 1
-
-        change_productivity = player.productivity + (player.happiness - player.stress) / 10
-        if change_productivity > 100:
-            player.productivity = 100
-        elif change_productivity < 0:
-            player.productivity = 0
-        else:
-            player.productivity = change_productivity
-
-        job.promotion_progress += player.productivity / 100
-        if job.promotion_progress >= 100:
-            job.promotion_progress = 0
-            job.promotion()
 
     # Initialize
     pygame.init()
@@ -179,18 +215,56 @@ def main():
 
     # Create Buttons
     buttons = []
+    visible_buttons = []
+    hoverable_buttons = []
+    prev_hovered = set()
 
-    test_button = Button("Work", style="centered", background_color=(240, 240, 240), debug_color=(255, 0, 0), on_click=work)
-    test_button.rect.center = (internal_width // 2, internal_height // 2 - 50)
-    buttons.append(test_button)
+    work_button = Button(
+        "Work", 
+        style = "centered", 
+        background_color = (240, 240, 240), 
+        debug_color = (255, 0, 0), 
+        on_click = work, 
+        on_hover = lambda: visible_buttons.append(pack_lunch_button) and hoverable_buttons.append(pack_lunch_button) if pack_lunch_button not in visible_buttons else None,
+        clean_up = lambda: visible_buttons.remove(pack_lunch_button) and hoverable_buttons.remove(pack_lunch_button) if pack_lunch_button in visible_buttons else None
+    )
+    work_button.rect.center = (internal_width // 2, internal_height // 2 - 50)
+    hoverable_buttons.append(work_button)
+    visible_buttons.append(work_button)
+    buttons.append(work_button)
 
-    test_button1 = Button("Rest", style="centered", background_color=(240, 250, 250), debug_color=(0, 255, 0), on_click=rest)
-    test_button1.rect.center = (internal_width // 2, internal_height // 2)
-    buttons.append(test_button1)
+    rest_button = Button(
+        "Rest", 
+        style = "centered", 
+        background_color = (240, 250, 250), 
+        debug_color = (0, 255, 0), 
+        on_click = rest
+    )
+    rest_button.rect.center = (internal_width // 2, internal_height // 2)
+    visible_buttons.append(rest_button)
+    buttons.append(rest_button)
     
-    test_button2 = Button("Eat", style="centered", background_color=(240, 240, 240), debug_color=(0, 0, 255), on_click=eat)
-    test_button2.rect.center = (internal_width // 2, internal_height // 2 + 50)
-    buttons.append(test_button2)
+    eat_button = Button(
+        "Eat", 
+        style = "centered", 
+        background_color = (240, 240, 240), 
+        debug_color = (0, 0, 255), 
+        on_click = eat
+    )
+    eat_button.rect.center = (internal_width // 2, internal_height // 2 + 50)
+    visible_buttons.append(eat_button)
+    buttons.append(eat_button)
+
+    pack_lunch_button = Button(
+        "Pack Lunch",
+        style = "centered",
+        background_color = (240, 240, 240),
+        debug_color = (255, 0, 255),
+        on_click = lambda: setattr(player, "packed_lunch", True),
+        parent = work_button
+    )
+    pack_lunch_button.rect.center = (work_button.rect.width // 2 + pack_lunch_button.rect.width // 2 + work_button.rect.centerx, work_button.rect.centery)
+    buttons.append(pack_lunch_button)
 
     # Player
     job = Job()
@@ -234,6 +308,23 @@ def main():
                             if player.health <= 0:
                                 gamestate = "game over"
         
+        # Handle mouse hovering
+        current_hovered = set()
+
+        for button in hoverable_buttons:
+            if button.rect.collidepoint(mouse_pos):
+                chain = get_hover_chain(button)
+                for btn in chain:
+                    btn.hover()
+                    btn.hovering = True
+                    current_hovered.add(btn)
+        
+        for button in prev_hovered - current_hovered:
+            btn.clean_up()
+            button.hovering = False
+
+        prev_hovered = current_hovered
+        
         # Special Binds
         if keys[pygame.K_LCTRL] and keys[pygame.K_SPACE]:
             if not space_pressed:
@@ -275,14 +366,14 @@ def main():
             user_interface_surfaces.append(work_time_text_surface)
 
             salary_text_surface = Button(f"Salary : {job.salary}", style="centered", debug_color=(0, 255, 0))
-            salary_text_surface.rect.topleft = (internal_width - salary_text_surface.rect.width, 35)
+            salary_text_surface.rect.topleft = (internal_width - salary_text_surface.rect.width, 50)
             user_interface_surfaces.append(salary_text_surface)
 
-            for i, surface in enumerate(user_interface_surfaces):
+            for surface in user_interface_surfaces:
                 internal_surface.blit(surface.surface, surface.rect.topleft)
 
             # Render Buttons
-            for button in buttons:
+            for button in visible_buttons:
                 internal_surface.blit(button.surface, button.rect.topleft)
                 
                 if debug_mode:
@@ -298,3 +389,10 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+'''
+ - Implement "parnet" buttons, to keep menus open during navigation
+ - Implement new food types
+ - Implement packing lunch
+'''
