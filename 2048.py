@@ -1,5 +1,6 @@
 import pygame
 import ctypes
+import random
 
 def main():
     class Button(pygame.sprite.Sprite):
@@ -87,9 +88,16 @@ def main():
         size = (min(internal_width, internal_height), min(internal_width, internal_height)),
         width_room = 0,
         height_room = 0,
-        background_color = (255, 255, 255)
+        background_color = (255, 253, 208)
     )
     game_board.rect.center = (internal_width // 2, internal_height // 2)
+
+    blocks = []
+    game_board_size = 4
+    cell_size = game_board.rect.width / game_board_size
+    possible_coords = [(x * (cell_size / 2) * (game_board_size / 2) + (cell_size / 2), y * (cell_size / 2) * (game_board_size / 2) + (cell_size / 2)) for x in range(game_board_size) for y in range(game_board_size)]
+    new_round = True
+    new_game = True
 
     running = True
     debug_mode = False
@@ -118,15 +126,52 @@ def main():
                     debug_mode = True
         else:
             space_pressed = False
+        
+        if keys[pygame.K_RETURN]:
+            if not return_pressed:
+                return_pressed = True
+                new_round = True
+        else:
+            return_pressed = False
 
         if gamestate == "game":
+            if possible_coords == []:
+                gamestate = "gameover"
+
+            elif new_round:
+                new_block = Button(
+                    size = (cell_size, cell_size),
+                    width_room = 0,
+                    height_room = 0,
+                    background_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+                )
+                new_block_pos = random.choice(possible_coords)
+                possible_coords.remove(new_block_pos)
+
+                new_block.rect.center = new_block_pos
+
+                blocks.append(new_block)
+
+                active_coords = [block.rect.center for block in blocks]
+
+                new_round = False
+
             # Interal rendering
             internal_surface.fill((0, 0, 0))
 
-            internal_surface.blit(game_board.surface, game_board.rect)
+            for block in blocks:
+                game_board.surface.blit(block.surface, block.rect)
 
             if debug_mode:
+                for block in blocks:
+                    block.debug(game_board.surface)
+                
                 game_board.debug(internal_surface)
+            
+            internal_surface.blit(game_board.surface, game_board.rect)
+        
+        elif gamestate == "gameover":
+            internal_surface.fill((50, 50, 50))
 
         # Upscale to 1920x1080
         scaled_surface = pygame.transform.scale(internal_surface, screen_size)
